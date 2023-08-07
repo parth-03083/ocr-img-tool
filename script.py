@@ -247,7 +247,7 @@ root.geometry("1100x1200")
 
 # canvas inside root window
 canvas = Canvas(root)
-canvas.place(relx = 0.01,rely=0.01 , anchor=NW , relheight= 0.7 , relwidth=0.5 ,)
+canvas.place(relx = 0.01,rely=0.01 , anchor=NW , relheight= 0.7 , relwidth=0.5 ,scrollregion=canvas.bbox("all"))
 canvas.bind('<MouseWheel>' , wheel)
 
 
