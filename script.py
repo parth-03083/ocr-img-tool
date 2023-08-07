@@ -14,6 +14,7 @@ img_index = 0
 path = os.path.join(os.getcwd(),"picsum")
 zoom_idx = 1
 zoomout_idx = 1
+
 # List of images in folder
 img_list = os.listdir(path)
 
@@ -96,6 +97,9 @@ def load_img(start=False):
     text = get_ocr_text(os.path.join( path, img_list[img_index]))
     text_box.delete("1.0",END)
     text_box.insert(END, text)
+    canvas.config(scrollregion=canvas.bbox("all"))
+    canvas.config(xscrollcommand=scroll_x.set)
+    canvas.config(yscrollcommand=scroll_y.set)
     canvas.update()
     return
 
@@ -121,6 +125,9 @@ def load_prev_img():
     text = get_ocr_text(os.path.join( path, img_list[img_index]))
     text_box.delete("1.0",END)
     text_box.insert(END, text)
+    canvas.config(scrollregion=canvas.bbox("all"))
+    canvas.config(xscrollcommand=scroll_x.set)
+    canvas.config(yscrollcommand=scroll_y.set)
     canvas.update()
     return
 
@@ -138,7 +145,7 @@ def save_text():
 
 def move_img():
     ''' 
-        Move the current image and its corroesponding text file to discard folder. Prints error if text file not found. and only moves the image
+        Move the current image and its corroesponding text file to discard folder. Prints error if text file not found. and only moves the image.
     '''
     try:
         try:
@@ -205,11 +212,10 @@ def wheel(event):
     # canvas.configure(scrollregion=canvas.bbox('all'))
     # canvas.update()
     print("Event :" , event)
-    if (event.delta > 0):
-        print(event.x,event.y)
-        canvas.scale("all", event.x, event.y, 1.1, 1.1)
-    elif (event.delta < 0):
-        canvas.scale("all", event.x, event.y, 0.9, 0.9)
+    if (event.delta == 120):
+        zoom()
+    elif (event.delta == -120):
+        zoom_out()
     # canvas.configure(scrollregion = canvas.bbox("all"))
 
 def zoom():
@@ -225,6 +231,10 @@ def zoom():
     img = img._PhotoImage__photo.zoom(zoom_idx)
     canvas.create_image(0,0,image=img,anchor = NW)
     canvas.image = img
+    canvas.config(scrollregion=canvas.bbox("all"))
+    canvas.config(xscrollcommand=scroll_x.set)
+    canvas.config(yscrollcommand=scroll_y.set)
+    canvas.update()
 
 def zoom_out():
     global zoom_idx 
@@ -239,6 +249,10 @@ def zoom_out():
     img = img._PhotoImage__photo.subsample(zoomout_idx)
     canvas.create_image(0,0,image=img,anchor = NW)
     canvas.image = img
+    canvas.config(scrollregion=canvas.bbox("all"))
+    canvas.config(xscrollcommand=scroll_x.set)
+    canvas.config(yscrollcommand=scroll_y.set)
+    canvas.update()
 
 # create root window
 root = Tk()                          
@@ -247,7 +261,7 @@ root.geometry("1100x1200")
 
 # canvas inside root window
 canvas = Canvas(root)
-canvas.place(relx = 0.01,rely=0.01 , anchor=NW , relheight= 0.7 , relwidth=0.5 ,scrollregion=canvas.bbox("all"))
+canvas.place(relx = 0.01,rely=0.01 , anchor=NW , relheight= 0.7 , relwidth=0.5 )
 canvas.bind('<MouseWheel>' , wheel)
 
 
@@ -277,14 +291,11 @@ button_zoom.place(relx= 0.20 , rely=0.7 )
 button_zoom_out = Button(root,text="-", padx = 6 , pady=4, bg="black", fg="white" , command=zoom_out)
 button_zoom_out.place(relx= 0.24 , rely=0.7 )
 
-scroll_x = Scrollbar(canvas, orient="horizontal", command=canvas.xview  )
-scroll_x.pack(side=BOTTOM , fill= X)
-scroll_y = Scrollbar(canvas, orient="vertical", command=canvas.yview  )
-scroll_y.pack(side=RIGHT , fill= Y)
-
-# canvas['yscrollcommand'] = scroll_y.set
-# canvas['xscrollcommand'] = scroll_x.set
-# canvas.update()
+scroll_x = Scrollbar(canvas, orient="horizontal", command=canvas.xview , background="black")
+scroll_x.pack(side=BOTTOM , fill= X ,expand = False)
+# canvas.config(xscrollcommand=scroll_x.set)
+scroll_y = Scrollbar(canvas, orient="vertical", command=canvas.yview )
+scroll_y.pack(side=RIGHT , fill= Y ,expand = False)
 
 curr_img = 1
 total_img = 10
@@ -293,7 +304,24 @@ cnt_text = str(curr_img) + "/" + str(total_img)
 cnt_label = Label(root, text=cnt_text, padx = 10 , pady=4, bg="black", fg="white")
 cnt_label.place(relx=0.5,rely=0.9,anchor=S)
 
+def save_file(event):
+    save_text()
 
+def move_file(event):
+    move_img()
+    
+def load_prev(event):
+    print("Load Prev Called")
+    load_prev_img()
+
+def load_next(event):
+    print(" Load Next Called Up")
+    load_img(False)
+
+root.bind('<Control-s>',save_file)
+root.bind('<Control-m>',move_file)
+root.bind('<Control-Left>',load_prev)
+root.bind('<Control-Right>',load_next)
 load_img(True)
 
 # Key Press Functionalities 
