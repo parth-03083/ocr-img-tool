@@ -1,5 +1,6 @@
 from tkinter import * 
 from PIL import ImageTk,Image  
+from tkinter.scrolledtext import ScrolledText
 import os
 from paddleocr import PaddleOCR
 import shutil
@@ -24,12 +25,22 @@ ocr = PaddleOCR( lang='en')
 
 # OCR Functionality 
 def get_ocr_text(path):
-    result = ocr.ocr(path, rec=True, cls=False)
+    '''
+        Function to get text of OCR reading from the image. If the text file for image exist then it'll be displayed else dynamically OCR will be carried out.
+    '''
+
+    file_path = os.path.join(FILE_SAVE_PATH , img_list[img_index]) + '.txt'
     str = ''
-    for idx in range(len(result)):
-        res = result[idx]
-        for line in res:
-            str += line[1][0] + '\n'
+    if os.path.exists(file_path):
+        print(" Got the text from the path  ")
+        with open(file_path , 'r') as f:
+            str = f.read()
+    else:    
+        result = ocr.ocr(path, rec=True, cls=False)
+        for idx in range(len(result)):
+            res = result[idx]
+            for line in res:
+                str += line[1][0] + '\n'
     return str
 
 def get_resized_image(img_obj = False):
@@ -73,22 +84,7 @@ def load_img(start=False):
     if img_index >= len(img_list):
         img_index = 0
     img_obj = Image.open(os.path.join( path, img_list[img_index]))
-    # print(img_obj.info)
-    # print(img_obj.width, img_obj.height)
-    if img_obj.width > 500 and img_obj.height > 500:
-        # print("Resizing")            
-        img = ImageTk.PhotoImage(img_obj.resize((500,500)))
-    elif img_obj.width < 500 and img_obj.height < 500:
-        # print(" Not Resizing")
-        img = ImageTk.PhotoImage(img_obj.resize((img_obj.width,img_obj.height)))
-    elif img_obj.width < 500 and img_obj.height > 500:
-        # print(" Width Resizing ")
-        img = ImageTk.PhotoImage(img_obj.resize((img_obj.width,500)))
-    elif img_obj.height < 500 and img_obj.width > 500:
-        # print(" Height Resizing ")
-        img = ImageTk.PhotoImage(img_obj.resize((500,img_obj.height)))
-    else:
-        img = ImageTk.PhotoImage(img_obj)
+    img = get_resized_image(img_obj)
     canvas.create_image(0,0, anchor=NW, image=img)
     canvas.image = img
     canvas.imscale = 0.9
@@ -126,6 +122,7 @@ def load_prev_img():
     text_box.delete("1.0",END)
     text_box.insert(END, text)
     canvas.config(scrollregion=canvas.bbox("all"))
+    canvas.config(confine=False)
     canvas.config(xscrollcommand=scroll_x.set)
     canvas.config(yscrollcommand=scroll_y.set)
     canvas.update()
@@ -211,14 +208,14 @@ def wheel(event):
     # # load_img()
     # canvas.configure(scrollregion=canvas.bbox('all'))
     # canvas.update()
-    print("Event :" , event)
+    # print("Event :" , event)
     if (event.delta == 120):
-        zoom()
+        zoom(x=event.x,y=event.y)
     elif (event.delta == -120):
-        zoom_out()
+        zoom_out(x=event.x, y=event.y)
     # canvas.configure(scrollregion = canvas.bbox("all"))
 
-def zoom():
+def zoom(x=0,y=0):
     global zoom_idx
     global zoomout_idx
     zoom_idx += 1
@@ -229,14 +226,29 @@ def zoom():
     img_obj = Image.open(os.path.join( path, img_list[img_index]))
     img = get_resized_image(img_obj)
     img = img._PhotoImage__photo.zoom(zoom_idx)
-    canvas.create_image(0,0,image=img,anchor = NW)
+    canvas.delete('all') # Remove Old Configurations 
+    # print(img.width())
+    confine = True
+    if img.width() < canvas.winfo_width() and img.height() < canvas.winfo_height():
+        canvas.create_image((canvas.winfo_width()/2) - (img.width()/2),canvas.winfo_height()/2 - (img.height()/2),image=img,anchor = NW)
+    elif img.width() > 500 and img.height()>500:
+        canvas.create_image(  (canvas.winfo_width()/2) - (img.width()/2) - (x/2),( canvas.winfo_height()/2) - (img.height()/2) - (y/2) ,image=img,anchor = NW)
+    elif img.width()>500:
+        canvas.create_image( (canvas.winfo_width()/2) - (img.width()/2) - (x/2) , 0 , image = img , anchor = NW )
+    elif img.height()>500:
+        canvas.create_image( 0  , (canvas.winfo_height/2) - (img.height()/2) - (y/2) , image = img , anchor = NW ) 
+    else:
+        canvas.create_image(0,0,image=img,anchor = NW)
+        confine = False
+        
     canvas.image = img
     canvas.config(scrollregion=canvas.bbox("all"))
+    canvas.config(confine=confine)
     canvas.config(xscrollcommand=scroll_x.set)
     canvas.config(yscrollcommand=scroll_y.set)
     canvas.update()
 
-def zoom_out():
+def zoom_out(x=0 , y=0):
     global zoom_idx 
     global zoomout_idx
     zoom_idx -=1
@@ -244,12 +256,26 @@ def zoom_out():
     if zoomout_idx<=0:
         zoom_idx = 1
         zoomout_idx = 1
+    canvas.delete('all') # Remove Old Configurations
     img_obj = Image.open(os.path.join( path, img_list[img_index]))
     img = get_resized_image(img_obj)
     img = img._PhotoImage__photo.subsample(zoomout_idx)
-    canvas.create_image(0,0,image=img,anchor = NW)
+    confine = True
+    if img.width() < canvas.winfo_width() and img.height() < canvas.winfo_height():
+        canvas.create_image((canvas.winfo_width()/2) - (img.width()/2),canvas.winfo_height()/2 - (img.height()/2),image=img,anchor = NW)
+    elif img.width() > 500 and img.height()>500:
+        canvas.create_image(  (canvas.winfo_width()/2) - (img.width()/2) - (x/2),( canvas.winfo_height()/2) - (img.height()/2) - (y/2) ,image=img,anchor = NW)
+    elif img.width()>500:
+        canvas.create_image( (canvas.winfo_width()/2) - (img.width()/2) - (x/2) , 0 , image = img , anchor = NW )
+    elif img.height()>500:
+        canvas.create_image( 0  , (canvas.winfo_height/2) - (img.height()/2) - (y/2) , image = img , anchor = NW ) 
+    else:
+        canvas.create_image(0,0,image=img,anchor = NW)
+        confine = False
+
     canvas.image = img
     canvas.config(scrollregion=canvas.bbox("all"))
+    canvas.config(confine=confine)
     canvas.config(xscrollcommand=scroll_x.set)
     canvas.config(yscrollcommand=scroll_y.set)
     canvas.update()
@@ -261,12 +287,18 @@ root.geometry("1100x1200")
 
 # canvas inside root window
 canvas = Canvas(root)
-canvas.place(relx = 0.01,rely=0.01 , anchor=NW , relheight= 0.7 , relwidth=0.5 )
+canvas.place(relx = 0.01,rely=0.01 , anchor=NW , relheight= 0.7 , relwidth=0.47 )
 canvas.bind('<MouseWheel>' , wheel)
 
 
-text_box = Text(root, bg="black", fg="white"  , cursor="arrow" , font=("Courier", 12) , wrap="word" , insertbackground="white" , highlightbackground="white" , highlightcolor="white" , padx=10 , pady=10, selectbackground="white" , selectforeground="black" , undo=True, yscrollcommand=True )
-text_box.place(relx = 0.6, rely = 0.01,relwidth=0.45,relheight=0.7, anchor=NW )
+text_box = Text(root, bg="black", fg="white"  , cursor="arrow" , font=("Courier", 12)  , wrap="none", insertbackground="white" , highlightbackground="white" , highlightcolor="white" , selectbackground="white" , selectforeground="black" , undo=True, yscrollcommand=True , xscrollcommand=True)
+text_box.place(relx = 0.56, rely = 0.01,relwidth=0.41,relheight=0.7, anchor=NW )
+text_scrollx = Scrollbar(text_box,orient="horizontal", command=text_box.xview , background="lightgrey"  , highlightbackground="grey" , highlightcolor="white" , bg ="lightgrey")
+text_scrollx.pack(side=BOTTOM , fill= X  , padx=0, pady= 0)
+text_box.config(xscrollcommand=text_scrollx.set)
+text_scrolly = Scrollbar(text_box,orient="vertical", command=text_box.yview , background="black")
+text_scrolly.pack(side=RIGHT , fill= Y,padx= 0, pady= 0)
+text_box.config(yscrollcommand=text_scrolly.set )
 
 
 # button inside root window
@@ -318,10 +350,11 @@ def load_next(event):
     print(" Load Next Called Up")
     load_img(False)
 
-root.bind('<Control-s>',save_file)
-root.bind('<Control-m>',move_file)
-root.bind('<Control-Left>',load_prev)
-root.bind('<Control-Right>',load_next)
+# root.bind('<Control-s>',save_file)
+# root.bind('<Control-m>',move_file)
+# root.bind('<Control-Left>',load_prev)
+# root.bind('<Control-Right>',load_next)
+
 load_img(True)
 
 # Key Press Functionalities 
